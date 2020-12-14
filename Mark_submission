@@ -1,0 +1,232 @@
+#import chatbot
+from chatterbot import ChatBot
+from chatterbot.trainers import ChatterBotCorpusTrainer
+import smtplib 
+from email import encoders
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from chatterbot.trainers import ListTrainer
+import requests
+import json
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+import webbrowser
+from threading import Timer
+import random
+#Give chatbot a name
+bot = ChatBot('IBMaria')
+#Creating a storage adapter for the chatbot
+bot = ChatBot(
+    'IBMaria',
+    storage_adapter='chatterbot.storage.SQLStorageAdapter',
+    database_uri='sqlite:///database.sqlite3'
+)
+#Creating logical adapter for chatbot
+bot = ChatBot(
+    'IBMaria',  
+    logic_adapters=[
+        'chatterbot.logic.BestMatch',
+        'chatterbot.logic.TimeLogicAdapter'],
+)
+#Train the bot to be able to make proper responses
+
+trainer = ChatterBotCorpusTrainer(bot)
+trainer2 = ListTrainer(bot)
+
+#training in premade standard greetings and conversations
+trainer.train(
+    "chatterbot.corpus.english.greetings",
+    "chatterbot.corpus.english.conversations"
+)
+
+#training in some usermade greetings
+trainer2.train([
+    "Thank you",
+    "You are very welcome! Is there anything else I can help you with?",
+])
+
+trainer2.train([
+    "Greetings!",
+    "Hello",
+])
+
+#Chatbot workspace. Where the chatbot is initialised and will quit when given a form of farewell
+name=input("Enter Your Name: ")
+print("Hello "+name+"! Welcome to the Bot Service, my name is IBMaria! If you need help determining what you can ask me type 'help'?")
+while True:
+    request=input(name+':')
+    response=bot.get_response(request)
+    #end the while loop/chatbot if user says goodbye
+    if request=='Bye' or request =='bye' or request =='Goodbye' or request =='goodbye' or request =='farewell':
+        print('IBMaria: Bye')
+        break
+    #load helppage with possible commands
+    elif request=='help' or request =='Help' or request =='help!' or request =='Help!' or request =='What can I ask':
+        print(
+            "IBMaria: The things I am able to help you with are:\n\
+Ask:                                              Result:\n\
+'What is the time?'                               Tells the time\n\
+'What are the available hammer products?'         Returns links to avaliable hammer products if any hammers are available\n\
+'What are the available screwdriver products?'    Returns links to avaliable screwdriver products if any screwdrivers are available\n\
+'Mail photo'                                      Mails photo to coworker\n\
+'How is the weather?'                             Get the weather information of your city\n\
+'Find new products'                               Launch configuration dashboard, where you can input webpages needed to be crawled"
+            )
+    #load possible hammer products links on webpage if user want's to see them
+    elif request=='What is the available hammer products?' or request =='Hammer' or request =='hammer'\
+        or request =='Hammer products' or request =='Hammer sortiment':
+        print(
+            "IBMaria: Here is a list of links to the different hammers we have for sale::\n\
+Hammer:                Link:\n\
+'Ball Pein'            https://Bewhaos.dk/Hammers/Ball_Pein\n\
+'Club Hammer'          https://Bewhaos.dk/Hammers/Club_Hammer\n\
+'Sledge Hammer'        https://Bewhaos.dk/Hammers/Sledge_Hammer\n"
+            )
+    #Show the missing screwdriver links:
+    elif request=='What is the available screwdriver products?' or request =='Screwdriver' or request =='screwdriver'\
+        or request =='Screwdriver products' or request =='Screwdriver sortiment':
+        print(
+            "IBMaria: Unfortunately there are no screwdrivers in stock."
+            )
+    #mail photo (didn't get this to work)
+    elif request=='Mail photo':
+        # get information needed to send mail
+        from_addr = input('From: ')
+        password = input('Password: ')
+        to_addr = input('To: ')
+        smtp_server = input('SMTP server: ')
+        photodir = input('Photo directory: ')
+
+        # email object defined
+        msg = MIMEMultipart()
+        msg['From'] = from_addr
+        msg['To'] = to_addr
+        msg['Subject'] = Header('hello world from smtp server', 'utf-8').encode()
+
+        # make the mail an attached mail
+        msg_content = MIMEText('send with attachment...', 'plain', 'utf-8')
+        msg.attach(msg_content)
+
+        # read the local picture
+        with open(photodir, 'rb') as f:
+            # define name of image to send
+            mime = MIMEBase('image', 'png', filename='img1.png')
+            # adding header data
+            mime.add_header('Content-Disposition', 'attachment', filename='1.png')
+            mime.add_header('X-Attachment-Id', '0')
+            mime.add_header('Content-ID', '<0>')
+            # read attachment file content
+            mime.set_payload(f.read())
+            # encode
+            encoders.encode_base64(mime)
+            # add MIMEBase object to MIMEMultipart object
+            msg.attach(mime)
+
+        server = smtplib.SMTP(smtp_server, 465)
+        server.set_debuglevel(1)
+        server.login(from_addr, password)
+        server.sendmail(from_addr, [to_addr], msg.as_string())
+        server.quit()
+    #Get weather info for customer where it's needed.
+    elif request=='How is the weather?':  
+        # API key from my account
+        api_key = "c59c84e9047229b53abb9ea98ce7c819"
+  
+        # the basis url used to get weather info
+        base_url = "http://api.openweathermap.org/data/2.5/weather?"
+  
+        # Enter city name
+        city_name = input("Enter city name : ") 
+  
+        # complete url adress
+        complete_url = base_url + "appid=" + api_key + "&q=" + city_name + "&units=metric"
+  
+        # return object from API
+        response = requests.get(complete_url) 
+  
+        # convert json data
+        x = response.json() 
+  
+        # find the values we are interested in from the data
+        if x["cod"] != "404": 
+  
+            # accessing info from main
+            y = x["main"] 
+  
+            # store temperature in celcius
+            current_temperature = y["temp"] 
+  
+            # store pressure
+            current_pressure = y["pressure"] 
+  
+            # store humidity
+            current_humidiy = y["humidity"] 
+  
+            # store weather description
+            z = x["weather"]  
+            weather_description = z[0]["description"] 
+  
+            # print the values 
+            print(" Temperature (in celcius unit) = " +
+                            str(current_temperature) + 
+                "\n atmospheric pressure (in hPa unit) = " +
+                            str(current_pressure) +
+                "\n humidity (in percentage) = " +
+                            str(current_humidiy) +
+                "\n description = " +
+                            str(weather_description)) 
+  
+        else: 
+            print(" City Not Found ") 
+    #Launch dashboard with oppertunity to write link that needs crawling and see what commands needs to be defined
+    elif request=='Find new products':
+        #define style of dashboard
+        external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+
+        #define the app
+        app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+        #define app layout dependent on user input
+        app.layout = html.Div(
+            [
+                html.I("Links to new product lines to be crawled"),
+                html.Br(),
+                dcc.Input(id="input1", type="text", placeholder=""),
+                html.Div(id="output"),
+                html.I("Unknown commands that needs output:\n"),
+                html.I("'"+non_known_command+"'"),
+            ]
+        )
+
+        #work with the input given by user in dashboard
+        @app.callback(
+            Output("output", "children"),
+            Input("input1", "value"),
+        )
+        def update_output(input1):
+            return u'Crawling link {}'.format(input1)
+            input_link = input1
+
+        #make random browser port
+        number = random.randint(1111,9999)
+        number = str(number)
+
+        #automatically load the dashboard
+        def open_browser():
+            webbrowser.open_new('http://127.0.0.1:'+number+'/')
+
+        if __name__ == "__main__":
+            Timer(1, open_browser).start();
+            app.run_server(port=number)
+    #If bot has a large uncertainty on what user wants print question and save that command that will be shown in the dashboard.
+    elif response.confidence < 0.75:
+        print('IBMaria: I am not sure what you mean, can you please try to formulate it in another manner?')
+        non_known_command = request
+    #Find answer for question and print it if the confidence is above 75%
+    else:
+        response=bot.get_response(request)
+        print('IBMaria:',response)
