@@ -17,7 +17,8 @@ from dash.dependencies import Input, Output
 import webbrowser
 from threading import Timer
 import random
-non_known_command = ""
+non_known_command = []
+i = 0
 #Give chatbot a name
 bot = ChatBot('IBMaria')
 #Creating a storage adapter for the chatbot
@@ -199,7 +200,7 @@ Hammer:                Link:\n\
                 dcc.Input(id="input1", type="text", placeholder=""),
                 html.Div(id="output"),
                 html.I("Unknown commands that needs output:\n"),
-                html.I("'"+non_known_command+"'"),
+                html.I("'"+str(non_known_command)+"'"),
             ]
         )
 
@@ -226,7 +227,11 @@ Hammer:                Link:\n\
     #If bot has a large uncertainty on what user wants print question and save that command that will be shown in the dashboard.
     elif response.confidence < 0.75:
         print('IBMaria: I am not sure what you mean, can you please try to formulate it in another manner?')
-        non_known_command = request
+        if i == 0:
+            non_known_command.append(request)
+        else:
+            non_known_command.append(', '+request)
+        i += 1
     #Find answer for question and print it if the confidence is above 75%
     else:
         response=bot.get_response(request)
