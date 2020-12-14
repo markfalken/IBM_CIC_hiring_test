@@ -17,6 +17,7 @@ from dash.dependencies import Input, Output
 import webbrowser
 from threading import Timer
 import random
+non_known_command = ""
 #Give chatbot a name
 bot = ChatBot('IBMaria')
 #Creating a storage adapter for the chatbot
